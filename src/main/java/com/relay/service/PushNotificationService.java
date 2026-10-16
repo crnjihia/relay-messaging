@@ -24,9 +24,10 @@ public class PushNotificationService {
     private final UserRepository userRepository;
     private final ReactiveStringRedisTemplate redisTemplate;
 
-    public PushNotificationService(FirebaseApp firebaseApp,
-                                   UserRepository userRepository,
-                                   ReactiveStringRedisTemplate redisTemplate) {
+    public PushNotificationService(
+            @org.springframework.beans.factory.annotation.Autowired(required = false) FirebaseApp firebaseApp,
+            UserRepository userRepository,
+            ReactiveStringRedisTemplate redisTemplate) {
         this.firebaseApp = firebaseApp;
         this.userRepository = userRepository;
         this.redisTemplate = redisTemplate;

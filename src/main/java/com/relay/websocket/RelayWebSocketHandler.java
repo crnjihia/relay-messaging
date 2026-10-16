@@ -57,16 +57,12 @@ public class RelayWebSocketHandler implements WebSocketHandler {
     public Mono<Void> handle(WebSocketSession session) {
         String sessionId = session.getId();
         AtomicReference<StompSession> stompSessionRef = new AtomicReference<>();
+        reactor.core.publisher.Sinks.Many<StompFrame> outputSink = reactor.core.publisher.Sinks.many().multicast().onBackpressureBuffer(256, false);
 
         // Output pipeline: frames emitted to this session are converted to WebSocket messages
         Mono<Void> output = session.send(
-                Flux.defer(() -> {
-                    StompSession s = stompSessionRef.get();
-                    if (s != null) {
-                        return s.getFrameStream();
-                    }
-                    return Flux.empty();
-                }).map(frame -> session.textMessage(StompFrameEncoder.encode(frame)))
+                outputSink.asFlux()
+                        .map(frame -> session.textMessage(StompFrameEncoder.encode(frame)))
         );
 
         // Input pipeline: messages from client are decoded into STOMP frames and processed
@@ -77,12 +73,14 @@ public class RelayWebSocketHandler implements WebSocketHandler {
                     List<StompFrame> frames = StompFrameDecoder.decode(payload);
                     return Flux.fromIterable(frames);
                 })
-                .flatMap(frame -> handleStompFrame(session, stompSessionRef, frame))
-                .then();
+                .flatMap(frame -> handleStompFrame(session, stompSessionRef, outputSink, frame))
+                .then()
+                .doFinally(sig -> outputSink.tryEmitComplete());
 
         // Run both input and output concurrently until connection terminates
         return Mono.zip(input, output).then()
                 .doFinally(signalType -> {
+                    outputSink.tryEmitComplete();
                     StompSession activeSession = stompSessionRef.get();
                     if (activeSession != null) {
                         sessionRegistry.unregister(sessionId);
@@ -98,17 +96,18 @@ public class RelayWebSocketHandler implements WebSocketHandler {
 
     private Mono<Void> handleStompFrame(WebSocketSession session,
                                         AtomicReference<StompSession> sessionRef,
+                                        reactor.core.publisher.Sinks.Many<StompFrame> outputSink,
                                         StompFrame frame) {
         StompCommand cmd = frame.command();
 
         if (cmd == StompCommand.CONNECT || cmd == StompCommand.STOMP) {
-            return handleConnect(session, sessionRef, frame);
+            return handleConnect(session, sessionRef, outputSink, frame);
         }
 
         StompSession stompSession = sessionRef.get();
         if (stompSession == null) {
             log.warn("Unauthorized STOMP command {} before CONNECT on session {}", cmd, session.getId());
-            return sendErrorAndClose(session, "Must CONNECT before sending commands", null);
+            return sendErrorAndClose(session, outputSink, "Must CONNECT before sending commands", null);
         }
 
         return switch (cmd) {
@@ -125,6 +124,7 @@ public class RelayWebSocketHandler implements WebSocketHandler {
 
     private Mono<Void> handleConnect(WebSocketSession session,
                                      AtomicReference<StompSession> sessionRef,
+                                     reactor.core.publisher.Sinks.Many<StompFrame> outputSink,
                                      StompFrame frame) {
         String token = frame.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
@@ -139,14 +139,14 @@ public class RelayWebSocketHandler implements WebSocketHandler {
 
         if (token == null || token.isBlank() || !jwtService.isValid(token)) {
             log.warn("STOMP CONNECT rejected: missing or invalid JWT on session {}", session.getId());
-            return sendErrorAndClose(session, "Authentication failed: Missing or invalid JWT token in Authorization header", null);
+            return sendErrorAndClose(session, outputSink, "Authentication failed: Missing or invalid JWT token in Authorization header", null);
         }
 
         Claims claims = jwtService.parseAndValidate(token);
         String userId = claims.getSubject();
         String username = (String) claims.get("username");
 
-        StompSession stompSession = new StompSession(session.getId(), userId, username, session);
+        StompSession stompSession = new StompSession(session.getId(), userId, username, session, outputSink);
         sessionRef.set(stompSession);
         sessionRegistry.register(stompSession);
 
@@ -298,14 +298,17 @@ public class RelayWebSocketHandler implements WebSocketHandler {
         return Mono.empty();
     }
 
-    private Mono<Void> sendErrorAndClose(WebSocketSession session, String message, String details) {
+    private Mono<Void> sendErrorAndClose(WebSocketSession session,
+                                         reactor.core.publisher.Sinks.Many<StompFrame> outputSink,
+                                         String message,
+                                         String details) {
         StompFrame.Builder builder = StompFrame.builder(StompCommand.ERROR)
                 .header("message", message);
         if (details != null) {
             builder.body(details);
         }
-        String encoded = StompFrameEncoder.encode(builder.build());
-        return session.send(Mono.just(session.textMessage(encoded)))
-                .then(session.close(CloseStatus.POLICY_VIOLATION));
+        outputSink.tryEmitNext(builder.build());
+        outputSink.tryEmitComplete();
+        return session.close(CloseStatus.POLICY_VIOLATION);
     }
 }

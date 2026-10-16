@@ -31,7 +31,9 @@ public class StorageService {
     @Value("${relay.minio.public-url-prefix:http://localhost:9000}")
     private String publicUrlPrefix;
 
-    public StorageService(MinioClient minioClient, MinioConfig minioConfig) {
+    public StorageService(
+            @org.springframework.beans.factory.annotation.Autowired(required = false) MinioClient minioClient,
+            MinioConfig minioConfig) {
         this.minioClient = minioClient;
         this.minioConfig = minioConfig;
     }

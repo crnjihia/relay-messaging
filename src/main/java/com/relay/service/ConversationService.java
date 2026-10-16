@@ -164,6 +164,9 @@ public class ConversationService {
                 });
     }
 
+    private static final MessageResponse EMPTY_MESSAGE =
+            new MessageResponse(null, null, null, null, null, null, null, null, null, null, null);
+
     private Mono<ConversationResponse> enrichConversation(Conversation conv) {
         Mono<List<UserResponse>> membersMono = userRepository.findByIdIn(conv.getMemberIds())
                 .map(UserResponse::fromDomain)
@@ -173,12 +176,13 @@ public class ConversationService {
                         conv.getId(), PageRequest.of(0, 1))
                 .next()
                 .map(MessageResponse::fromDomain)
-                .defaultIfEmpty(null);
+                .defaultIfEmpty(EMPTY_MESSAGE);
 
-        return Mono.zip(membersMono, lastMessageMono.defaultIfEmpty(new MessageResponse(null, null, null, null, null, null, null, null, null, null, null)))
+        return Mono.zip(membersMono, lastMessageMono)
                 .map(tuple -> {
                     List<UserResponse> members = tuple.getT1();
-                    MessageResponse lastMsg = tuple.getT2().id() != null ? tuple.getT2() : null;
+                    MessageResponse msg = tuple.getT2();
+                    MessageResponse lastMsg = (msg != null && msg != EMPTY_MESSAGE && msg.id() != null) ? msg : null;
                     return ConversationResponse.fromDomain(conv, members, lastMsg, 0);
                 });
     }

@@ -32,11 +32,15 @@ public class StompSession {
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
     public StompSession(String sessionId, String userId, String username, WebSocketSession webSocketSession) {
+        this(sessionId, userId, username, webSocketSession, Sinks.many().multicast().onBackpressureBuffer(BOUNDED_BUFFER_SIZE, false));
+    }
+
+    public StompSession(String sessionId, String userId, String username, WebSocketSession webSocketSession, Sinks.Many<StompFrame> frameSink) {
         this.sessionId = sessionId;
         this.userId = userId;
         this.username = username;
         this.webSocketSession = webSocketSession;
-        this.frameSink = Sinks.many().multicast().onBackpressureBuffer(BOUNDED_BUFFER_SIZE, false);
+        this.frameSink = frameSink;
     }
 
     public String getSessionId() {

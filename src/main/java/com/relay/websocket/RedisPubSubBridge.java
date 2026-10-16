@@ -66,25 +66,29 @@ public class RedisPubSubBridge {
         // 1. Subscribe to Chat Conversation messages across instances: chat:conversation:*
         listenerContainer.receive(new PatternTopic(RedisConfig.CHAT_CONVERSATION_CHANNEL_PREFIX + "*"))
                 .doOnNext(this::handleConversationMessage)
-                .doOnError(err -> log.error("Error in conversation listener pipeline: {}", err.getMessage()))
+                .doOnError(err -> log.warn("Warning in conversation listener pipeline: {}", err.getMessage()))
+                .retryWhen(reactor.util.retry.Retry.backoff(15, java.time.Duration.ofSeconds(2)).transientErrors(true))
                 .subscribe();
 
         // 2. Subscribe to Read Receipts: chat:receipt:*
         listenerContainer.receive(new PatternTopic(RedisConfig.CHAT_RECEIPT_CHANNEL_PREFIX + "*"))
                 .doOnNext(this::handleReceiptMessage)
-                .doOnError(err -> log.error("Error in receipt listener pipeline: {}", err.getMessage()))
+                .doOnError(err -> log.warn("Warning in receipt listener pipeline: {}", err.getMessage()))
+                .retryWhen(reactor.util.retry.Retry.backoff(15, java.time.Duration.ofSeconds(2)).transientErrors(true))
                 .subscribe();
 
         // 3. Subscribe to Presence updates: presence:updates
         listenerContainer.receive(new ChannelTopic(RedisConfig.PRESENCE_UPDATES_CHANNEL))
                 .doOnNext(this::handlePresenceMessage)
-                .doOnError(err -> log.error("Error in presence listener pipeline: {}", err.getMessage()))
+                .doOnError(err -> log.warn("Warning in presence listener pipeline: {}", err.getMessage()))
+                .retryWhen(reactor.util.retry.Retry.backoff(15, java.time.Duration.ofSeconds(2)).transientErrors(true))
                 .subscribe();
 
         // 4. Subscribe to Redis Keyspace Expired events: __keyevent@*__:expired
         listenerContainer.receive(new PatternTopic(RedisConfig.KEYSPACE_EXPIRED_PATTERN))
                 .doOnNext(this::handleKeyspaceExpiration)
-                .doOnError(err -> log.error("Error in keyspace expiration pipeline: {}", err.getMessage()))
+                .doOnError(err -> log.warn("Warning in keyspace expiration pipeline: {}", err.getMessage()))
+                .retryWhen(reactor.util.retry.Retry.backoff(15, java.time.Duration.ofSeconds(2)).transientErrors(true))
                 .subscribe();
 
         log.info("Initialized ReactiveRedisMessageListenerContainer for chat fan-out, presence, and keyspace expiration.");
