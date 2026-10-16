@@ -1,15 +1,29 @@
 # ⚡ Relay Messaging
 
 > **Scalable Real-Time Messaging Backend for Kenyan SMEs**  
-> Built with **Spring Boot 3 (WebFlux, Reactive)**, **STOMP over WebSocket**, **Redis 7 (Pub/Sub & Presence)**, **MongoDB 6**, **Firebase Admin SDK (FCM)**, and **Docker Compose**.
+> Built with **Spring Boot 3.3 (WebFlux, Reactive)**, **STOMP over WebSocket**, **Redis 7 (Pub/Sub & Presence)**, **MongoDB 6**, **Firebase Admin SDK (FCM)**, and **Docker Compose**.
 
+[![CI Build & Test](https://github.com/crnjihia/relay-messaging/actions/workflows/ci.yml/badge.svg)](https://github.com/crnjihia/relay-messaging/actions/workflows/ci.yml)
+[![GitHub Pages](https://github.com/crnjihia/relay-messaging/actions/workflows/deploy-pages.yml/badge.svg)](https://crnjihia.github.io/relay-messaging/)
+[![GitHub Release](https://img.shields.io/github/v/release/crnjihia/relay-messaging?color=blue)](https://github.com/crnjihia/relay-messaging/releases)
+[![GHCR Docker Package](https://img.shields.io/badge/GHCR-Docker%20Package-24292e?logo=github)](https://github.com/crnjihia/relay-messaging/pkgs/container/relay-messaging)
 [![Java 21](https://img.shields.io/badge/Java-21%20LTS-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.0%20(Reactive)-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Spring Security](https://img.shields.io/badge/Spring%20Security-6.3-blue.svg)](https://spring.io/projects/spring-security)
 [![Protocol](https://img.shields.io/badge/WebSocket-STOMP%201.2-purple.svg)](https://stomp.github.io/)
 [![Redis](https://img.shields.io/badge/Redis-7%20Pub%2FSub%20%2B%20Presence-red.svg)](https://redis.io/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.0%20Reactive-green.svg)](https://www.mongodb.com/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+<p align="center">
+  <img src="docs/stomp-demo.png" alt="Relay Messaging Live STOMP Console" width="950" style="border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);" />
+</p>
+
+<p align="center">
+  <a href="https://crnjihia.github.io/relay-messaging/"><b>🌐 Live Documentation Portal</b></a> •
+  <a href="https://github.com/crnjihia/relay-messaging/releases"><b>🚀 Download Releases</b></a> •
+  <a href="docs/STOMP_PROTOCOL.md"><b>📜 STOMP Protocol Spec</b></a> •
+  <a href="docs/Relay_Messaging.postman_collection.json"><b>📬 Postman Collection</b></a>
+</p>
 
 ---
 
