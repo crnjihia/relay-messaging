@@ -532,7 +532,16 @@
             }
         }
 
+        const renderedMessageIds = new Set();
+
         function appendMessageBubble(msg) {
+            if (msg.id && renderedMessageIds.has(msg.id)) {
+                return; // Already rendered (e.g. delivered via both topic and user queue)
+            }
+            if (msg.id) {
+                renderedMessageIds.add(msg.id);
+            }
+
             const list = document.getElementById('messagesList');
             if (list.children.length === 1 && list.children[0].textContent.includes('No messages')) {
                 list.innerHTML = '';
@@ -540,6 +549,7 @@
 
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble';
+            bubble.setAttribute('data-msg-id', msg.id || '');
             bubble.innerHTML = `
                 <div class="message-header">
                     <strong>${msg.senderName || msg.senderId}</strong>
