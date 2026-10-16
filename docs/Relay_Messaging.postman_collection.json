@@ -1,0 +1,367 @@
+{
+  "info": {
+    "name": "Relay Messaging API (Kenyan SME Slack)",
+    "_postman_id": "c1f7a490-781e-4509-9182-3bf2948f9801",
+    "description": "Comprehensive REST and WebSocket test collection for Relay Messaging reactive backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register User 1 (Kamau)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set('token_user1', jsonData.token);",
+                  "    pm.environment.set('user1_id', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"kamau_retail\",\n  \"displayName\": \"Kamau Retailers\",\n  \"email\": \"kamau@retail.co.ke\",\n  \"password\": \"SecurePass123!\",\n  \"avatarUrl\": \"https://images.unsplash.com/photo-1534528741775-53994a69daeb\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register User 2 (Wanjiku)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set('token_user2', jsonData.token);",
+                  "    pm.environment.set('user2_id', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"wanjiku_supplies\",\n  \"displayName\": \"Wanjiku Logistics\",\n  \"email\": \"wanjiku@supplies.co.ke\",\n  \"password\": \"SecurePass123!\",\n  \"avatarUrl\": \"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set('token_user1', jsonData.token);",
+                  "    pm.environment.set('user1_id', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"kamau_retail\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users",
+      "item": [
+        {
+          "name": "Get Current User (/users/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{user2_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{user2_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update FCM Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"dGVzdC1mY20tdG9rZW4tZm9yLXJlbGF5LW1lc3NhZ2luZw==\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/fcm-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "fcm-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Conversations",
+      "item": [
+        {
+          "name": "Create Direct Message (DM)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set('conversation_id', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DM\",\n  \"memberIds\": [\"{{user2_id}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations"]
+            }
+          }
+        },
+        {
+          "name": "Create Group Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"GROUP\",\n  \"name\": \"Nairobi Suppliers Hub\",\n  \"memberIds\": [\"{{user2_id}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations"]
+            }
+          }
+        },
+        {
+          "name": "List User Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversation_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversation_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Messages & Attachments",
+      "item": [
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) {",
+                  "    pm.environment.set('message_id', jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hujambo Wanjiku, je mizigo iko tayari kwa usafirishaji?\",\n  \"contentType\": \"TEXT\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversation_id}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversation_id}}", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Get Messages (Cursor Pagination)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversation_id}}/messages?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversation_id}}", "messages"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "before", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user2}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"{{message_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversation_id}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversation_id}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Get Read Receipts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_user1}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{conversation_id}}/receipts",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{conversation_id}}", "receipts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Observability & Health",
+      "item": [
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/actuator/prometheus",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "prometheus"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+services:
+  # Nginx Load Balancer (Exposes port 8080 to clients, load balances across app replicas)
+  nginx:
+    image: nginx:alpine
+    container_name: relay-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      relay-app-1:
+        condition: service_healthy
+      relay-app-2:
+        condition: service_healthy
+    networks:
+      - relay-network
+
+  # Relay Application - Instance 1
+  relay-app-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relay-app-1
+    environment:
+      - SERVER_PORT=8080
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=relay-attachments
+      - MINIO_PUBLIC_URL_PREFIX=http://localhost:9000
+      - JWT_SECRET=relay-messaging-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha
+    ports:
+      - "8081:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - relay-network
+
+  # Relay Application - Instance 2 (Demonstrating Redis Pub/Sub Fan-Out across instances)
+  relay-app-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: relay-app-2
+    environment:
+      - SERVER_PORT=8080
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=relay-attachments
+      - MINIO_PUBLIC_URL_PREFIX=http://localhost:9000
+      - JWT_SECRET=relay-messaging-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha
+    ports:
+      - "8082:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - relay-network
+
+  # MongoDB 6 (Reactive persistence)
+  mongodb:
+    image: mongo:6
+    container_name: relay-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - relay-network
+
+  # Redis 7 (Pub/sub, presence TTL, and keyspace notifications)
+  redis:
+    image: redis:7-alpine
+    container_name: relay-redis
+    command: ["redis-server", "--notify-keyspace-events", "KEx"]
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - relay-network
+
+  # MinIO (S3-compatible attachment storage)
+  minio:
+    image: minio/minio:latest
+    container_name: relay-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - relay-network
+
+networks:
+  relay-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  minio-data:

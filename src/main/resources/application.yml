@@ -1,0 +1,56 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: relay-messaging
+
+  codec:
+    max-in-memory-size: 26MB
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/relay_db}
+      auto-index-creation: true
+
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+relay:
+  jwt:
+    secret: ${JWT_SECRET:relay-messaging-super-secret-key-that-is-at-least-256-bits-long-for-hmac-sha}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:72}
+
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:relay-attachments}
+    public-url-prefix: ${MINIO_PUBLIC_URL_PREFIX:http://localhost:9000}
+
+  firebase:
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [corr=%X{correlationId}] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.relay: DEBUG
+    org.springframework.data.mongodb: INFO
+    org.springframework.data.redis: INFO

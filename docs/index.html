@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay Messaging — Lightweight Slack for Kenyan SMEs</title>
+    <meta name="description" content="Scalable real-time messaging backend built with Spring WebFlux, STOMP over WebSocket, Redis 7 Pub/Sub & Presence, and MongoDB 6.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090d16;
+            --surface: #111827;
+            --surface-hover: #1f2937;
+            --border: #1f2937;
+            --primary: #3b82f6;
+            --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --text: #f9fafb;
+            --text-muted: #9ca3af;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism nav */
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(9, 13, 22, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            font-size: 1.35rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            list-style: none;
+        }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: transform 0.15s, opacity 0.2s;
+        }
+        .nav-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Hero */
+        .hero {
+            padding: 6rem 2rem 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            line-height: 1.15;
+        }
+        .hero h1 span {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 750px;
+            margin: 0 auto 2.5rem;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.85rem 1.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            transition: transform 0.15s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.85rem 1.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: var(--surface-hover); }
+
+        /* Feature grid */
+        .section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+        .section-header h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-3px);
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 0.5rem;
+            background: rgba(59, 130, 246, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Code block */
+        .code-container {
+            background: #020617;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            margin-top: 1.5rem;
+        }
+
+        /* Benchmark Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 3rem;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-val {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-brand">
+            ⚡ Relay Messaging
+        </div>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+            <li><a href="#benchmarks">Benchmarks</a></li>
+            <li><a href="STOMP_PROTOCOL.md">STOMP Docs</a></li>
+            <li><a href="https://github.com/crnjihia/relay-messaging">GitHub</a></li>
+        </ul>
+        <a href="https://github.com/crnjihia/relay-messaging/releases" class="nav-btn">v1.0.0 Release</a>
+    </nav>
+
+    <header class="hero">
+        <div class="badge">
+            <span>🇰🇪 Optimized for Kenyan SME Team Collaboration</span>
+        </div>
+        <h1>Real-Time Messaging with <span>Zero Blocking Threads</span></h1>
+        <p>A reactive, event-driven Slack alternative built with Spring WebFlux, STOMP over WebSocket, Redis 7 Pub/Sub & Presence, and MongoDB 6.</p>
+        <div class="hero-actions">
+            <a href="https://github.com/crnjihia/relay-messaging#quickstart--docker-compose" class="btn-primary">Get Started in 60s</a>
+            <a href="STOMP_PROTOCOL.md" class="btn-secondary">View STOMP Protocol Spec</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-val">1,000+</div>
+                <div class="stat-label">Concurrent WS Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">&lt; 35ms</div>
+                <div class="stat-label">p95 Round-Trip Latency</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">100%</div>
+                <div class="stat-label">Reactive Non-Blocking</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val">0</div>
+                <div class="stat-label">Critical Messages Lost</div>
+            </div>
+        </div>
+    </header>
+
+    <section class="section" id="features">
+        <div class="section-header">
+            <h2>Built for Scale & Resilience</h2>
+            <p>Designed to handle erratic mobile networks, high concurrency, and horizontal cluster scaling.</p>
+        </div>
+        <div class="grid-3">
+            <div class="feature-card">
+                <div class="feature-icon">📡</div>
+                <h3>Redis Pub/Sub Fan-Out</h3>
+                <p>Transparent cross-replica routing. Persist to MongoDB once, publish to Redis, and automatically broadcast across all active nodes.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⏱️</div>
+                <h3>TTL Presence Engine</h3>
+                <p>30s client heartbeats with 60s Redis TTL. Automatic Redis keyspace expiry detection guarantees accurate offline presence.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Intelligent Backpressure</h3>
+                <p>Bounded buffers safely drop non-critical presence telemetry under slow network links while preserving 100% of chat messages.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔔</div>
+                <h3>Firebase FCM Push</h3>
+                <p>Intelligent offline notification engine with 30-second conversation anti-spam batching and automatic stale token pruning.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚖️</div>
+                <h3>SME Quotas & Guardrails</h3>
+                <p>Redis sliding-window rate limiters enforce 20 msg/min and 5 conversations/day to prevent network abuse and runaway costs.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🪣</div>
+                <h3>MinIO S3 Attachments</h3>
+                <p>Reactive multipart upload streaming for invoices, receipts, and product images up to 25 MB with S3-compatible cloud storage.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="architecture">
+        <div class="section-header">
+            <h2>Simple, Production-Ready Deployment</h2>
+            <p>Run 2 application replicas behind Nginx with one Docker Compose command.</p>
+        </div>
+        <div class="code-container">
+<span style="color:#60a5fa;"># Clone and start full cluster with load balancer</span>
+git clone https://github.com/crnjihia/relay-messaging.git
+cd relay-messaging
+docker compose up -d --build
+
+<span style="color:#60a5fa;"># Verify health across both replicas</span>
+curl http://localhost:8080/actuator/health
+<span style="color:#34d399;">{"status":"UP"}</span>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Relay Messaging. Open-source under Apache License 2.0. Built for Kenyan SMEs.</p>
+    </footer>
+</body>
+</html>

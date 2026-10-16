@@ -1,0 +1,47 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Grant Execute Permission to Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Build Executable Application Jar
+        run: ./mvnw clean package -DskipTests
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Relay Messaging ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          body_path: RELEASE_NOTES_v1.0.0.md
+          files: |
+            target/relay-messaging-*.jar
+            docs/Relay_Messaging.postman_collection.json
+            docs/Relay_Messaging.postman_environment.json
+            scripts/stomp-client-ui.html
+            scripts/test-stomp-client.js
+            perf/k6-load-test.js
+            perf/LOAD_TEST_REPORT_TEMPLATE.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay Messaging — STOMP Live Console</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            font-weight: 700;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #60a5fa;
+        }
+        .badge {
+            background: #1e3a8a;
+            color: #93c5fd;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 9999px;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            background: #374151;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+        .dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .dot.away { background: #f59e0b; }
+        .dot.offline { background: #ef4444; }
+
+        .container {
+            display: grid;
+            grid-template-columns: 340px 1fr 400px;
+            gap: 1rem;
+            padding: 1rem;
+            flex: 1;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow: hidden;
+        }
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        input, select, textarea {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            outline: none;
+        }
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn.secondary { background: var(--surface-hover); }
+        .btn.danger { background: var(--danger); }
+        .btn.accent { background: var(--accent); }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding-right: 0.5rem;
+        }
+        .message-bubble {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-size: 0.875rem;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .log-terminal {
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-in { color: #38bdf8; }
+        .log-out { color: #4ade80; }
+        .log-err { color: #f87171; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <span>⚡ Relay Messaging</span>
+            <span class="badge">STOMP over WebSocket (Kenyan SME)</span>
+        </div>
+        <div class="status-pill">
+            <span class="dot" id="status-dot"></span>
+            <span id="status-text">Disconnected</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Auth & Connection Settings -->
+        <div class="card">
+            <div class="card-title">1. Authentication</div>
+            <div class="form-group">
+                <label>Server Base URL</label>
+                <input type="text" id="baseUrl" value="http://localhost:8080" />
+            </div>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" value="kamau_retail" />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" value="SecurePass123!" />
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn secondary" onclick="handleRegister()">Register</button>
+                <button class="btn" onclick="handleLogin()">Login</button>
+            </div>
+
+            <div class="card-title" style="margin-top:1rem;">2. STOMP WebSocket</div>
+            <div class="form-group">
+                <label>WebSocket URL</label>
+                <input type="text" id="wsUrl" value="ws://localhost:8080/ws" />
+            </div>
+            <div class="form-group">
+                <label>JWT Token</label>
+                <input type="text" id="jwtToken" placeholder="Auto-populated on login" />
+            </div>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn accent" id="btnConnect" onclick="connectStomp()">Connect</button>
+                <button class="btn danger" id="btnDisconnect" onclick="disconnectStomp()" disabled>Disconnect</button>
+            </div>
+            <div class="form-group" style="margin-top:0.5rem;">
+                <label style="display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" id="chkHeartbeat" checked onchange="toggleHeartbeat(this.checked)" />
+                    Auto-send Heartbeat (every 30s)
+                </label>
+            </div>
+        </div>
+
+        <!-- Chat & Topic Subscriptions -->
+        <div class="card">
+            <div class="card-title">3. Conversation Chat Room</div>
+            <div style="display:flex; gap:0.5rem;">
+                <input type="text" id="convId" placeholder="Conversation ID (e.g. 67104b901a88b4)" style="flex:1;" />
+                <button class="btn" onclick="subscribeConversation()">Join / Sub</button>
+            </div>
+
+            <div class="messages-container" id="messagesList">
+                <div style="color:var(--text-muted); text-align:center; margin-top:2rem;">
+                    No messages yet. Connect and subscribe to a conversation topic.
+                </div>
+            </div>
+
+            <div style="display:flex; gap:0.5rem;">
+                <input type="text" id="msgContent" placeholder="Type message in Swahili or English..." style="flex:1;" onkeydown="if(event.key==='Enter') sendChatMessage()" />
+                <button class="btn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+
+        <!-- STOMP Protocol Raw Frames Terminal -->
+        <div class="card">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>STOMP Wire Protocol Frames</span>
+                <button class="btn secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="log-terminal" id="logTerminal"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let heartbeatInterval = null;
+        let subCounter = 0;
+
+        function log(msg, type = '') {
+            const terminal = document.getElementById('logTerminal');
+            const span = document.createElement('div');
+            if (type) span.className = 'log-' + type;
+            span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            terminal.appendChild(span);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logTerminal').innerHTML = '';
+        }
+
+        function setStatus(status, text) {
+            const dot = document.getElementById('status-dot');
+            dot.className = 'dot ' + status;
+            document.getElementById('status-text').textContent = text;
+        }
+
+        async function handleRegister() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${baseUrl}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        displayName: username.toUpperCase(),
+                        email: `${username}@sme.ke`,
+                        password
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    document.getElementById('jwtToken').value = data.token;
+                    log(`Registered & Logged in as ${username}`, 'out');
+                } else {
+                    log(`Register error: ${JSON.stringify(data)}`, 'err');
+                }
+            } catch (e) {
+                log(`Register request failed: ${e.message}`, 'err');
+            }
+        }
+
+        async function handleLogin() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${baseUrl}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernameOrEmail: username, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.token) {
+                    document.getElementById('jwtToken').value = data.token;
+                    log(`Login success! Token acquired for ${username}`, 'out');
+                } else {
+                    log(`Login error: ${JSON.stringify(data)}`, 'err');
+                }
+            } catch (e) {
+                log(`Login request failed: ${e.message}`, 'err');
+            }
+        }
+
+        function connectStomp() {
+            const wsUrl = document.getElementById('wsUrl').value;
+            const token = document.getElementById('jwtToken').value.trim();
+
+            if (!token) {
+                alert('Please Login or Register first to get a JWT token.');
+                return;
+            }
+
+            log(`Connecting to ${wsUrl}...`);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                log(`WebSocket TCP connection established. Sending STOMP CONNECT frame...`, 'out');
+                const connectFrame = `CONNECT\naccept-version:1.2\nAuthorization:Bearer ${token}\nheart-beat:30000,30000\n\n\0`;
+                ws.send(connectFrame);
+                log(`>>> CONNECT\nAuthorization: Bearer ${token.substring(0, 15)}...`, 'out');
+            };
+
+            ws.onmessage = (event) => {
+                const raw = event.data;
+                log(`<<< ${raw.replace(/\0/g, '^@')}`, 'in');
+                parseStompFrame(raw);
+            };
+
+            ws.onerror = (err) => {
+                log(`WebSocket error occurred`, 'err');
+            };
+
+            ws.onclose = () => {
+                setStatus('offline', 'Disconnected');
+                document.getElementById('btnConnect').disabled = false;
+                document.getElementById('btnDisconnect').disabled = true;
+                clearInterval(heartbeatInterval);
+                log(`WebSocket connection closed`, 'err');
+            };
+        }
+
+        function disconnectStomp() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const discFrame = `DISCONNECT\nreceipt:disc-${Date.now()}\n\n\0`;
+                ws.send(discFrame);
+                log(`>>> DISCONNECT`, 'out');
+                setTimeout(() => ws.close(), 300);
+            }
+        }
+
+        function parseStompFrame(text) {
+            if (text.startsWith('CONNECTED')) {
+                setStatus('online', 'CONNECTED (ONLINE)');
+                document.getElementById('btnConnect').disabled = true;
+                document.getElementById('btnDisconnect').disabled = false;
+
+                // Subscribe to user personal queues
+                subscribeDest('/user/queue/messages');
+                subscribeDest('/user/queue/receipts');
+                subscribeDest('/user/queue/presence');
+
+                // Start heartbeat
+                startHeartbeat();
+            } else if (text.startsWith('MESSAGE')) {
+                handleMessageFrame(text);
+            } else if (text.startsWith('ERROR')) {
+                log(`Server Error Frame Received: ${text}`, 'err');
+            }
+        }
+
+        function subscribeDest(destination) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            subCounter++;
+            const subId = `sub-${subCounter}`;
+            const frame = `SUBSCRIBE\nid:${subId}\ndestination:${destination}\nack:auto\n\n\0`;
+            ws.send(frame);
+            log(`>>> SUBSCRIBE ${destination} [${subId}]`, 'out');
+        }
+
+        function subscribeConversation() {
+            const convId = document.getElementById('convId').value.trim();
+            if (!convId) {
+                alert('Enter a valid conversation ID');
+                return;
+            }
+            subscribeDest(`/topic/conversations/${convId}`);
+        }
+
+        function sendChatMessage() {
+            const convId = document.getElementById('convId').value.trim();
+            const content = document.getElementById('msgContent').value.trim();
+            if (!convId || !content) return;
+
+            const payload = JSON.stringify({
+                conversationId: convId,
+                content: content,
+                contentType: 'TEXT'
+            });
+
+            const frame = `SEND\ndestination:/app/chat.send\ncontent-type:application/json\nreceipt:msg-${Date.now()}\n\n${payload}\0`;
+            ws.send(frame);
+            log(`>>> SEND /app/chat.send: "${content}"`, 'out');
+            document.getElementById('msgContent').value = '';
+        }
+
+        function handleMessageFrame(frameText) {
+            const nullIdx = frameText.indexOf('\0');
+            const cleanText = nullIdx !== -1 ? frameText.substring(0, nullIdx) : frameText;
+            const emptyLineIdx = cleanText.indexOf('\n\n');
+            if (emptyLineIdx === -1) return;
+
+            const bodyStr = cleanText.substring(emptyLineIdx + 2);
+            try {
+                const data = JSON.parse(bodyStr);
+                if (data.content !== undefined) {
+                    // Chat message
+                    appendMessageBubble(data);
+                } else if (data.status !== undefined) {
+                    // Presence update
+                    log(`[Presence Update] User ${data.userId} -> ${data.status}`, 'in');
+                } else if (data.lastReadMessageId !== undefined) {
+                    // Read receipt
+                    log(`[Read Receipt] User ${data.userId} marked read up to ${data.lastReadMessageId}`, 'in');
+                }
+            } catch (e) {
+                log(`Failed to parse JSON body: ${bodyStr}`, 'err');
+            }
+        }
+
+        function appendMessageBubble(msg) {
+            const list = document.getElementById('messagesList');
+            if (list.children.length === 1 && list.children[0].textContent.includes('No messages')) {
+                list.innerHTML = '';
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.innerHTML = `
+                <div class="message-header">
+                    <strong>${msg.senderName || msg.senderId}</strong>
+                    <span>${new Date(msg.createdAt || Date.now()).toLocaleTimeString()}</span>
+                </div>
+                <div>${msg.content}</div>
+            `;
+            list.appendChild(bubble);
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function startHeartbeat() {
+            clearInterval(heartbeatInterval);
+            if (!document.getElementById('chkHeartbeat').checked) return;
+
+            heartbeatInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(`SEND\ndestination:/app/presence.heartbeat\n\n{}\0`);
+                    log(`>>> HEARTBEAT /app/presence.heartbeat`, 'out');
+                }
+            }, 30000);
+        }
+
+        function toggleHeartbeat(checked) {
+            if (checked) startHeartbeat();
+            else clearInterval(heartbeatInterval);
+        }
+    </script>
+</body>
+</html>
