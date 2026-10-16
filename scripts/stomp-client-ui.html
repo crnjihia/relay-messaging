@@ -229,9 +229,10 @@
         <!-- Chat & Topic Subscriptions -->
         <div class="card">
             <div class="card-title">3. Conversation Chat Room</div>
-            <div style="display:flex; gap:0.5rem;">
-                <input type="text" id="convId" placeholder="Conversation ID (e.g. 67104b901a88b4)" style="flex:1;" />
+            <div style="display:flex; gap:0.5rem; margin-bottom: 0.5rem;">
+                <input type="text" id="convId" placeholder="Conversation ID (auto-created or paste ID)" style="flex:1;" />
                 <button class="btn" onclick="subscribeConversation()">Join / Sub</button>
+                <button class="btn accent" onclick="createAndJoinChannel()">+ New Room</button>
             </div>
 
             <div class="messages-container" id="messagesList">
@@ -300,6 +301,7 @@
                 if (res.ok && data.token) {
                     document.getElementById('jwtToken').value = data.token;
                     log(`Registered & Logged in as ${username}`, 'out');
+                    await loadOrInitConversations(data.token);
                 } else {
                     log(`Register error: ${JSON.stringify(data)}`, 'err');
                 }
@@ -323,11 +325,84 @@
                 if (res.ok && data.token) {
                     document.getElementById('jwtToken').value = data.token;
                     log(`Login success! Token acquired for ${username}`, 'out');
+                    await loadOrInitConversations(data.token);
                 } else {
                     log(`Login error: ${JSON.stringify(data)}`, 'err');
                 }
             } catch (e) {
                 log(`Login request failed: ${e.message}`, 'err');
+            }
+        }
+
+        async function loadOrInitConversations(token) {
+            const baseUrl = document.getElementById('baseUrl').value;
+            try {
+                const res = await fetch(`${baseUrl}/conversations`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const convs = await res.json();
+                if (Array.isArray(convs) && convs.length > 0) {
+                    document.getElementById('convId').value = convs[0].id;
+                    log(`Active room ready: "${convs[0].name || 'Direct Message'}" (ID: ${convs[0].id})`, 'out');
+                } else {
+                    // Fetch user info to auto-create default room
+                    const meRes = await fetch(`${baseUrl}/users/me`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const me = await meRes.json();
+                    const createRes = await fetch(`${baseUrl}/conversations`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({
+                            type: 'GROUP',
+                            name: 'Nairobi SME Hub',
+                            memberIds: [me.id]
+                        })
+                    });
+                    const newConv = await createRes.json();
+                    if (newConv.id) {
+                        document.getElementById('convId').value = newConv.id;
+                        log(`Initialized default room: "${newConv.name}" (ID: ${newConv.id})`, 'out');
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading conversations:', e);
+            }
+        }
+
+        async function createAndJoinChannel() {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const token = document.getElementById('jwtToken').value.trim();
+            if (!token) {
+                alert('Please Login or Register first');
+                return;
+            }
+            try {
+                const meRes = await fetch(`${baseUrl}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const me = await meRes.json();
+                const roomName = prompt('Enter New Room / Channel Name:', 'Nairobi SME Hub') || 'Nairobi SME Hub';
+
+                const res = await fetch(`${baseUrl}/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        type: 'GROUP',
+                        name: roomName,
+                        memberIds: [me.id]
+                    })
+                });
+                const conv = await res.json();
+                if (res.ok && conv.id) {
+                    document.getElementById('convId').value = conv.id;
+                    log(`Created room "${conv.name}" (ID: ${conv.id})`, 'out');
+                    subscribeConversation();
+                } else {
+                    log(`Create room error: ${JSON.stringify(conv)}`, 'err');
+                }
+            } catch (e) {
+                log(`Failed to create room: ${e.message}`, 'err');
             }
         }
 
